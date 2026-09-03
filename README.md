@@ -39,7 +39,7 @@ sudo apt install curl
 
 Bạn có thể cài Extension Manager để dễ thao tác bằng giao diện.
 
-Download repository rồi mở **Terminal** chạy lệnh:
+Download repository, giải nén, đổi tên thư mục thành `stock-market@binhnguyensoft.com` rồi mở **Terminal** chạy lệnh:
 
 ```bash
 gnome-extensions install --force stock-market@binhnguyensoft.com
