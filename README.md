@@ -92,4 +92,4 @@ SYMBOLS = [
 
 Widget này được phát triển dựa trên widget Stocks (Übersicht cho macOS) của tác giả Dion Munk tại [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks)].
 
-Tác giả Dion Munk yêu cầu giấy phép [https://creativecommons.org/licenses/by-nc/4.0/]('Creative Commons Attribution-NonCommercial 4.0 International License').
+Tác giả Dion Munk yêu cầu giấy phép [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/).
