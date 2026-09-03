@@ -14,7 +14,7 @@ Linux Desktop Widget GNOME Shell cho bạn nào quan tâm các mã chứng khoá
 - Phần trăm tăng giảm
 - Dữ liệu cập nhật 10 phút/lần
 
-Widget này được phát triển dựa trên widget Stocks (Übersicht cho macOS) của tác giả Dion Munk tại [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks)].
+Widget này được phát triển dựa trên widget Stocks (Übersicht cho macOS) của tác giả Dion Munk tại [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks).
 
 ## Yêu cầu
 
@@ -74,7 +74,22 @@ const DEFAULT_X = 15;
 const DEFAULT_Y = 15;
 ```
 
+## Thay đổi mã theo dõi
+
+Sửa file `stocks_fetch.py` trong thư mục `~/.local/share/gnome-shell/extensions/stock-market@binhnguyensoft.com`. Tại dòng sau ở đầu file:
+
+```python3
+# Các mã cần xem
+SYMBOLS = [
+    "GC=F", "BZ=F", "CL=F", "DX-Y.NYB", "BTC-USD",
+    "^DJI", "^GSPC", "^VNINDEX.VN", "MBB.VN", "VCB.VN", "SSI.VN",
+]
+```
+
+Để xác định mã của cổ phiếu hay chỉ số, vào [https://finance.yahoo.com/](https://finance.yahoo.com/). Trong ô Search của trang, tìm mã mong muốn, rồi mở nó ra, ngay trên title, bạn sẽ thấy mã cần xem, ví dụ: Bitcoin USD Price (BTC-USD) thì BTC-USD là mã cần copy vào code.
+
 ## Credit
 
 Widget này được phát triển dựa trên widget Stocks (Übersicht cho macOS) của tác giả Dion Munk tại [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks)].
-Tác giả Dion Munk yêu cầu giấy phép Creative Commons Attribution-NonCommercial 4.0 International License.
+
+Tác giả Dion Munk yêu cầu giấy phép [https://creativecommons.org/licenses/by-nc/4.0/](Creative Commons Attribution-NonCommercial 4.0 International License).
