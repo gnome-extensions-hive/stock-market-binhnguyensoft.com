@@ -73,6 +73,7 @@ Việc lập trình kéo thả widget quá phức tạp nên mình đặt vị t
 const DEFAULT_X = 15;
 const DEFAULT_Y = 15;
 ```
+Vì có trừ hao thanh menu bar nên vị trí theo chiều đứng hơi thụt xuống, chỉnh DEFAULT_Y thành số âm nếu cần thiết.
 
 ## Thay đổi mã theo dõi
 
