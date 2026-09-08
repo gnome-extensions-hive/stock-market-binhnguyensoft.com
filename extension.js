@@ -8,16 +8,23 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+import {translator} from './language.js';
+
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
-const MAX_BACKOFF_MS = 60 * 60 * 1000;
-const PROCESS_TIMEOUT_MS = 20 * 1000;
+const MAX_BACKOFF = 60 * 60 * 1000;
+const PROCESS_TIMEOUT = 20 * 1000;
 const MAX_OUTPUT_CHARS = 2 * 1024 * 1024;
 const EXTENSION_UUID = 'stock-market@binhnguyensoft.com';
-const DEFAULT_X = 15;
-const DEFAULT_Y = 15;
 const MAX_ROWS = 20;
+
+
+function numberFormatters(t) {
+    return [0, 2].map(digits => new Intl.NumberFormat(t('en-US', 'vi-VN'), {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    }));
+}
 
 function makeLabel(text, styleClass, params = {}) {
     const label = new St.Label({
@@ -51,30 +58,27 @@ function validFinite(value, absMax = 1e12) {
     return n;
 }
 
-function formatNumber(value, symbol) {
+function formatNumber(value, symbol, formatters) {
     const n = validFinite(value);
     if (n === null)
         return '—';
     const isVnStock = symbol?.endsWith('.VN') && !symbol.startsWith('^');
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: isVnStock ? 0 : 2,
-        maximumFractionDigits: isVnStock ? 0 : 2,
-    }).format(n);
+    return formatters[isVnStock ? 0 : 1].format(n);
 }
 
-function formatSigned(value, symbol) {
+function formatSigned(value, symbol, formatters) {
     const n = validFinite(value);
     if (n === null)
         return '—';
-    const base = formatNumber(Math.abs(n), symbol);
+    const base = formatNumber(Math.abs(n), symbol, formatters);
     return `${n >= 0 ? '+' : '-'}${base}`;
 }
 
-function formatPct(value) {
+function formatPct(value, formatters) {
     const n = validFinite(value, 100000);
     if (n === null)
         return '—';
-    return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+    return `${n >= 0 ? '+' : ''}${formatters[1].format(n)}%`;
 }
 
 function validatePayload(data) {
@@ -118,7 +122,7 @@ class SafeCommandRunner {
             throw new Error('Runner đã bị hủy');
 
         this.cancel();
-        const serial = ++this._serial;
+        const serial = this._serial;
         const cancellable = new Gio.Cancellable();
         const proc = Gio.Subprocess.new(
             argv,
@@ -128,7 +132,7 @@ class SafeCommandRunner {
         this._cancellable = cancellable;
 
         let timedOut = false;
-        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PROCESS_TIMEOUT_MS, () => {
+        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PROCESS_TIMEOUT, () => {
             this._timeoutId = 0;
             if (this._proc === proc && serial === this._serial) {
                 timedOut = true;
@@ -142,9 +146,6 @@ class SafeCommandRunner {
             const [stdout, stderr] = await proc.communicate_utf8_async(null, cancellable);
             if (serial !== this._serial || this._destroyed)
                 throw new Error('__STOCKS_CANCELLED__');
-            if (timedOut)
-                throw new Error('Tiến trình lấy giá quá thời gian');
-
             const out = stdout ?? '';
             const err = stderr ?? '';
             if (out.length > MAX_OUTPUT_CHARS || err.length > MAX_OUTPUT_CHARS)
@@ -191,18 +192,21 @@ const StocksWidget = GObject.registerClass(
 class StocksWidget extends St.BoxLayout {
     _init(extension) {
         super._init({
-            orientation: Clutter.Orientation.VERTICAL,
+            vertical: true,
             style_class: 'stocks-card',
             reactive: false,
             can_focus: false,
         });
 
         this._extension = extension;
+        this._settings = extension.getSettings();
+        this._t = translator(this._settings);
+        this._formatters = numberFormatters(this._t);
+        this._generation = 0;
         this._runner = new SafeCommandRunner();
         this._refreshSourceId = 0;
         this._failureCount = 0;
         this._destroyed = false;
-        this._rowActors = [];
         this._monitorsChangedId = 0;
 
         this._buildUi();
@@ -210,22 +214,48 @@ class StocksWidget extends St.BoxLayout {
         Main.layoutManager._backgroundGroup.add_child(this);
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this._updatePosition());
+        this._settingsId = this._settings.connect('changed', (_settings, key) => {
+            if (key === 'left' || key === 'top') {
+                this._updatePosition();
+                return;
+            }
+            this._generation++;
+            this._runner.cancel();
+            this._failureCount = 0;
+            if (key === 'language') {
+                this._t = translator(this._settings);
+                this._formatters = numberFormatters(this._t);
+                this._title.text = this._t('FINANCIAL MARKETS', 'THỊ TRƯỜNG TÀI CHÍNH');
+            }
+            if (key === 'symbols' || key === 'language') {
+                this._renderRows([]);
+                this._updated.text = this._t('Updated: --:--', 'Cập nhật: --:--');
+                this._showError(null);
+            }
+            void this._refresh();
+        });
         void this._refresh();
+    }
+
+    get _intervalMs() {
+        return this._settings.get_int('duration') * 60 * 1000;
     }
 
     _updatePosition() {
         const monitorIndex = Math.max(0, Main.layoutManager.primaryIndex ?? 0);
-        const workArea = Main.layoutManager.getWorkAreaForMonitor(monitorIndex);
-        this.set_position(workArea.x + DEFAULT_X, workArea.y + DEFAULT_Y);
+        const monitor = Main.layoutManager.monitors[monitorIndex];
+        if (monitor)
+            this.set_position(monitor.x + this._settings.get_int('left'),
+                monitor.y + this._settings.get_int('top'));
     }
 
     _buildUi() {
-        this._title = makeLabel('THỊ TRƯỜNG TÀI CHÍNH', 'stocks-title');
+        this._title = makeLabel(this._t('FINANCIAL MARKETS', 'THỊ TRƯỜNG TÀI CHÍNH'), 'stocks-title');
         this.add_child(this._title);
 
         const subtitleRow = new St.BoxLayout({x_expand: true});
         this._subtitle = makeLabel('Yahoo Finance', 'stocks-subtitle', {x_expand: true});
-        this._updated = makeLabel('Cập nhật: --:--', 'stocks-subtitle', {
+        this._updated = makeLabel(this._t('Updated: --:--', 'Cập nhật: --:--'), 'stocks-subtitle', {
             x_align: Clutter.ActorAlign.END,
         });
         subtitleRow.add_child(this._subtitle);
@@ -233,7 +263,7 @@ class StocksWidget extends St.BoxLayout {
         this.add_child(subtitleRow);
 
         this._table = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
+            vertical: true,
             style_class: 'stocks-table',
             x_expand: true,
         });
@@ -244,15 +274,8 @@ class StocksWidget extends St.BoxLayout {
         this.add_child(this._errorText);
     }
 
-    _clearRows() {
-        for (const actor of this._rowActors) {
-            try { actor.destroy(); } catch (_) {}
-        }
-        this._rowActors = [];
-    }
-
     _renderRows(rows) {
-        this._clearRows();
+        this._table.destroy_all_children();
         for (const row of rows) {
             const line = new St.BoxLayout({
                 style_class: 'stocks-row',
@@ -264,49 +287,26 @@ class StocksWidget extends St.BoxLayout {
             });
             symbol.set_width(88);
 
-            const price = makeLabel(formatNumber(row.price, row.symbol), 'stocks-price', {
-                x_align: Clutter.ActorAlign.END,
-            });
-            price.set_width(82);
-            price.clutter_text.set_line_alignment(Pango.Alignment.RIGHT);
-
-            const changeClass = row.change === null
-                ? 'stocks-change stocks-neutral'
-                : row.change >= 0
-                    ? 'stocks-change stocks-up'
-                    : 'stocks-change stocks-down';
-            const change = makeLabel(formatSigned(row.change, row.symbol), changeClass, {
-                x_align: Clutter.ActorAlign.END,
-            });
-            change.set_width(72);
-            change.clutter_text.set_line_alignment(Pango.Alignment.RIGHT);
-
-            const pctClass = row.changePercent === null
-                ? 'stocks-pct stocks-neutral'
-                : row.changePercent >= 0
-                    ? 'stocks-pct stocks-up'
-                    : 'stocks-pct stocks-down';
-            const pctText = row.changePercent === null
-                ? '—'
-                : `${formatPct(row.changePercent)} ${row.changePercent >= 0 ? '▲' : '▼'}`;
-            const pct = makeLabel(pctText, pctClass, {
-                x_align: Clutter.ActorAlign.END,
-            });
-            pct.set_width(72);
-            pct.clutter_text.set_line_alignment(Pango.Alignment.RIGHT);
-
+            const addNumber = (text, style, width, value) => {
+                const color = value === undefined ? '' : value === null
+                    ? ' stocks-neutral' : value >= 0 ? ' stocks-up' : ' stocks-down';
+                const label = makeLabel(text, style + color, {x_align: Clutter.ActorAlign.END});
+                label.set_width(width);
+                label.clutter_text.set_line_alignment(Pango.Alignment.RIGHT);
+                line.add_child(label);
+            };
             line.add_child(symbol);
-            line.add_child(price);
-            line.add_child(change);
-            line.add_child(pct);
+            addNumber(formatNumber(row.price, row.symbol, this._formatters), 'stocks-price', 82);
+            addNumber(formatSigned(row.change, row.symbol, this._formatters), 'stocks-change', 72, row.change);
+            const pctText = row.changePercent === null ? '—'
+                : `${formatPct(row.changePercent, this._formatters)} ${row.changePercent >= 0 ? '▲' : '▼'}`;
+            addNumber(pctText, 'stocks-pct', 72, row.changePercent);
             this._table.add_child(line);
-            this._rowActors.push(line);
         }
 
         if (rows.length === 0) {
-            const empty = makeLabel('Chưa có dữ liệu giá.', 'stocks-subtitle');
+            const empty = makeLabel(this._t('No price data. Add symbols in Preferences.', 'Chưa có dữ liệu giá. Thêm mã trong Tùy chọn.'), 'stocks-subtitle');
             this._table.add_child(empty);
-            this._rowActors.push(empty);
         }
     }
 
@@ -324,11 +324,7 @@ class StocksWidget extends St.BoxLayout {
         }
         this._refreshSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delayMs, () => {
             this._refreshSourceId = 0;
-            try { void this._refresh(); }
-            catch (error) {
-                console.error(`Extension: ${EXTENSION_UUID}: timer failed: ${error}`);
-                this._scheduleFailure();
-            }
+            void this._refresh();
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -336,7 +332,7 @@ class StocksWidget extends St.BoxLayout {
     _scheduleFailure() {
         this._failureCount = Math.min(this._failureCount + 1, 8);
         const factor = 2 ** Math.max(0, this._failureCount - 1);
-        this._scheduleNext(Math.min(REFRESH_INTERVAL_MS * factor, MAX_BACKOFF_MS));
+        this._scheduleNext(Math.min(this._intervalMs * factor, Math.max(MAX_BACKOFF, this._intervalMs)));
     }
 
     async _refresh() {
@@ -348,10 +344,19 @@ class StocksWidget extends St.BoxLayout {
             this._refreshSourceId = 0;
         }
 
+        const symbols = this._settings.get_strv('symbols');
+        if (symbols.length === 0) {
+            this._renderRows([]);
+            this._updated.text = this._t('Updated: --:--', 'Cập nhật: --:--');
+            this._showError(null);
+            return;
+        }
+
+        const generation = this._generation;
         try {
             const script = GLib.build_filenamev([this._extension.path, 'stocks_fetch.py']);
-            const result = await this._runner.run(['python3', '-B', script]);
-            if (this._destroyed)
+            const result = await this._runner.run(['python3', '-B', script, JSON.stringify(symbols)]);
+            if (this._destroyed || generation !== this._generation)
                 return;
 
             let data;
@@ -361,7 +366,7 @@ class StocksWidget extends St.BoxLayout {
             } catch (error) {
                 throw new Error(raw || result.stderr.trim() || `JSON lỗi: ${error.message}`);
             }
-            if (data.error)
+            if (data?.error)
                 throw new Error(String(data.error).slice(0, 500));
             if (!result.successful)
                 throw new Error(result.stderr.trim() || 'Tiến trình lấy giá thất bại');
@@ -373,28 +378,30 @@ class StocksWidget extends St.BoxLayout {
                 ? Math.max(0, Number(data.liveCount))
                 : rows.length;
             const updatedText = timeTextFromEpoch(data.updatedAt);
-            if (updatedText)
-                this._updated.text = `Cập nhật: ${updatedText}`;
+            this._updated.text = `${this._t('Updated', 'Cập nhật')}: ${updatedText ?? '--:--'}`;
 
-            const warning = data.warning ? String(data.warning).slice(0, 220) : '';
+            const warning = !data.warning ? '' : data.fromCache
+                ? this._t('Update failed; showing cached prices.', 'Không cập nhật được; đang dùng dữ liệu gần nhất.')
+                : liveCount > 0
+                    ? this._t('Some symbols could not be updated.', 'Một số mã chưa cập nhật được.')
+                    : this._t('No Yahoo data yet; retrying automatically.', 'Chưa lấy được dữ liệu Yahoo; sẽ tự thử lại.');
             this._showError(warning || null);
 
-            if (liveCount > 0) {
+            if (liveCount > 0 || rows.length === 0) {
                 this._failureCount = 0;
-                this._scheduleNext(REFRESH_INTERVAL_MS);
+                this._scheduleNext(this._intervalMs);
             } else {
                 this._scheduleFailure();
             }
         } catch (error) {
-            if (this._destroyed)
+            if (this._destroyed || generation !== this._generation)
                 return;
             if (error.message === '__STOCKS_CANCELLED__' ||
                 error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
                 return;
 
             // Preserve the last valid market data instead of clearing the UI.
-            const message = String(error.message || error).slice(0, 500);
-            this._showError(`Không cập nhật được · ${message}`);
+            this._showError(this._t('Could not update prices. Will retry automatically.', 'Không cập nhật được giá. Sẽ tự thử lại.'));
             console.error(`Extension: ${EXTENSION_UUID}: refresh failed: ${error}`);
             this._scheduleFailure();
         }
@@ -404,6 +411,11 @@ class StocksWidget extends St.BoxLayout {
         if (this._destroyed)
             return;
         this._destroyed = true;
+        this._generation++;
+        if (this._settingsId) {
+            this._settings.disconnect(this._settingsId);
+            this._settingsId = 0;
+        }
         this._runner?.destroy();
         this._runner = null;
         if (this._refreshSourceId) {
@@ -414,7 +426,6 @@ class StocksWidget extends St.BoxLayout {
             Main.layoutManager.disconnect(this._monitorsChangedId);
             this._monitorsChangedId = 0;
         }
-        this._clearRows();
         super.destroy();
     }
 });

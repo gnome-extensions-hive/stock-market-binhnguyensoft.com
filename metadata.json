@@ -1,8 +1,9 @@
 {
-  "name": "Stock Market",
+  "name": "Stock Market Widget",
   "description": "Widget hiển thị bảng giá các mã chứng khoán, tiền số,... từ Yahoo Finance trên desktop",
   "uuid": "stock-market@binhnguyensoft.com",
-  "version": 3,
-  "version-name": "3.0",
-  "shell-version": ["45", "46", "47", "48", "49", "50", "51"]
+  "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
+  "settings-schema": "org.gnome.shell.extensions.stock-market-binhnguyensoft-com",
+  "url": "https://github.com/ngthanhbinh85/stock-market-binhnguyensoft.com/",
+  "version-name": "1.1.0"
 }

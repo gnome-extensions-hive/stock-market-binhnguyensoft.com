@@ -53,41 +53,33 @@ Nếu extension không hiển thị, hãy logout rồi login lại, sau đó, b�
 gnome-extensions enable stock-market@binhnguyensoft.com
 ```
 
-## Tùy chỉnh
+## Tùy chỉnh / Preferences
 
-Mặc định, dữ liệu cập nhật 10 phút một lần, vị trí xuất hiện widget: trên 15px, trái 15px. Nếu muốn thay đổi, sửa file `extension.js` trong thư mục `~/.local/share/gnome-shell/extensions/stock-market@binhnguyensoft.com` như sau:
+Biên dịch schema sau khi tải hoặc cập nhật mã nguồn:
 
-### Tần suất cập nhật 
-
-Thay 10 bằng số khác. KHUYÊN CÁO: KHÔNG nên cập nhật quá thường xuyên để tránh trường hợp server Yahoo chặn.
-
-```js
-const REFRESH_INTERVAL = 10 * 60 * 1000;
+```bash
+glib-compile-schemas schemas/
 ```
 
-### Vị trí
+Mở cấu hình bằng Extension Manager hoặc:
 
-Việc lập trình kéo thả widget quá phức tạp nên mình đặt vị trí cố định. Sửa hai dòng sau nếu bạn muốn thay đổi:
-
-```js
-const DEFAULT_X = 15;
-const DEFAULT_Y = 15;
-```
-Vì có trừ hao thanh menu bar nên vị trí theo chiều đứng hơi thụt xuống, chỉnh DEFAULT_Y thành số âm nếu cần thiết.
-
-## Thay đổi mã theo dõi
-
-Sửa file `stocks_fetch.py` trong thư mục `~/.local/share/gnome-shell/extensions/stock-market@binhnguyensoft.com`. Tại dòng sau ở đầu file:
-
-```python3
-# Các mã cần xem
-SYMBOLS = [
-    "GC=F", "BZ=F", "CL=F", "DX-Y.NYB", "BTC-USD",
-    "^DJI", "^GSPC", "^VNINDEX.VN", "MBB.VN", "VCB.VN", "SSI.VN",
-]
+```bash
+gnome-extensions prefs stock-market@binhnguyensoft.com
 ```
 
-Để xác định mã của cổ phiếu hay chỉ số, vào [https://finance.yahoo.com/](https://finance.yahoo.com/). Trong ô Search của trang, tìm mã mong muốn, rồi mở nó ra, ngay trên title, bạn sẽ thấy mã cần xem, ví dụ: Bitcoin USD Price (BTC-USD) thì BTC-USD là mã cần copy vào code.
+- **Vị trí:** Trái/Trên tính bằng pixel từ góc trên trái thật của màn hình chính, không cộng chiều cao thanh menu. Đặt cả hai bằng 0 để dùng đúng gốc màn hình; thanh menu có thể che phần trên của widget. Mặc định: 15/15 px.
+- **Chu kỳ cập nhật:** 5–300 phút, mặc định 10 phút. Khi có lỗi, widget tự tăng thời gian thử lại.
+- **Mã theo dõi:** nhập các symbols Yahoo Finance, phân cách bằng dấu phẩy hoặc khoảng trắng, rồi nhấn nút áp dụng. Tối đa 20 mã. Xóa mã khỏi ô để bỏ theo dõi; xóa hết để tạm dừng yêu cầu mạng.
+- **Ngôn ngữ:** Theo hệ thống, English hoặc Tiếng Việt. Thay đổi áp dụng ngay cho widget và cửa sổ cấu hình.
+
+### English
+
+Compile settings with `glib-compile-schemas schemas/` after downloading or updating the source, then open Preferences using Extension Manager or the command above.
+
+- **Position:** Left/Top are pixels from the primary monitor’s actual top-left corner, without a panel offset. Set both to zero for the screen origin; the top panel may cover that part of the widget. Defaults: 15/15 px.
+- **Update interval:** 5–300 minutes, default 10. Failed updates use exponential retry delays.
+- **Symbols:** enter up to 20 Yahoo Finance symbols separated by commas or spaces, then click Apply. Remove entries to stop tracking them. An empty list pauses network requests.
+- **Language:** System default, English, or Vietnamese; changes apply immediately.
 
 ## Credit
 

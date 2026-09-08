@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.stock-market-binhnguyensoft-com" path="/org/gnome/shell/extensions/stock-market-binhnguyensoft-com/">
+    <key name="left" type="i">
+      <range min="0" max="10000"/>
+      <default>15</default>
+      <summary>Left</summary>
+      <description>Distance from the left edge in pixels.</description>
+    </key>
+    <key name="top" type="i">
+      <range min="0" max="10000"/>
+      <default>15</default>
+      <summary>Top</summary>
+      <description>Distance from the top edge in pixels.</description>
+    </key>
+    <key name="duration" type="i">
+      <range min="5" max="300"/>
+      <default>10</default>
+      <summary>Update Interval</summary>
+      <description>Time between price updates (in minutes). Please keep this to at least 5 minutes to avoid server rate limiting.</description>
+    </key>
+    <key name="symbols" type="as">
+      <default>["GC=F", "BZ=F", "CL=F", "DX-Y.NYB", "BTC-USD", "^DJI", "^GSPC", "^VNINDEX.VN", "MBB.VN", "VCB.VN", "SSI.VN"]</default>
+      <summary>Symbols</summary>
+      <description>Symbols for stocks, indices, crypto, etc. to monitor.</description>
+    </key>
+    <key name="language" type="s">
+      <choices><choice value="auto"/><choice value="en"/><choice value="vi"/></choices>
+      <default>'auto'</default>
+      <summary>Language</summary>
+    </key>
+  </schema>
+</schemalist>

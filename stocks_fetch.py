@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -119,6 +120,7 @@ def load_cache():
 
 def save_cache(rows, updated_at):
     """Cố gắng ghi cache, nếu cache lỗi thì bỏ qua. Cache dùng để lưu dữ liệu gần nhất phòng trường hợp lấy dữ liệu trực tiếp thất bại thì sử dụng lại cache."""
+    tmp = CACHE_FILE.with_name(f".{CACHE_FILE.name}.{os.getpid()}.tmp")
     try:
         CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
         try:
@@ -130,7 +132,6 @@ def save_cache(rows, updated_at):
             ensure_ascii=False,
             separators=(",", ":"),
         )
-        tmp = CACHE_FILE.with_name(f".{CACHE_FILE.name}.{os.getpid()}.tmp")
         tmp.write_text(payload, encoding="utf-8")
         os.chmod(tmp, 0o600)
         os.replace(tmp, CACHE_FILE)
@@ -225,7 +226,27 @@ def fetch_live(cookie_jar):
     return by_symbol, live_count
 
 
+def configure_symbols(raw):
+    global SYMBOLS, SYMBOLS_CSV
+    values = json.loads(raw)
+    if not isinstance(values, list) or len(values) > 20:
+        raise ValueError("Expected up to 20 symbols")
+    normalized = []
+    for value in values:
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9^][A-Za-z0-9.^=_-]{0,31}", value):
+            raise ValueError("Invalid symbol")
+        if value.upper() not in normalized:
+            normalized.append(value.upper())
+    SYMBOLS = normalized
+    SYMBOLS_CSV = ",".join(SYMBOLS)
+
+
 def main():
+    if len(sys.argv) > 1:
+        configure_symbols(sys.argv[1])
+    if not SYMBOLS:
+        print(json.dumps({"rows": [], "liveCount": 0, "updatedAt": None}))
+        return 0
     cache = load_cache()
 
     runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
@@ -253,7 +274,9 @@ def main():
         # Nếu Yahoo không trả đủ dữ liệu thì dùng lại dữ liệu gần nhất còn lưu tương ứng cho từng mã
         rows = []
         for sym in SYMBOLS:
-            row = live_by_symbol.get(sym) or old_by_symbol.get(sym)
+            row = live_by_symbol.get(sym)
+            if row is None or row["price"] is None:
+                row = old_by_symbol.get(sym) or row
             if not row:
                 row = {"symbol": sym, "price": None, "change": None, "changePercent": None}
             rows.append(row)
