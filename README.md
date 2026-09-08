@@ -1,4 +1,82 @@
 # stock-market@binhnguyensoft.com
+
+(Tiếng Việt ở bên dưới)
+
+A desktop widget for GNOME Shell that displays real-time quotes for stocks, cryptocurrencies, and world indices from Yahoo Finance.
+
+## Screenshot
+
+![Screenshot](stock-market.webp)
+
+## Overview
+
+A Linux GNOME Shell desktop widget designed for anyone tracking domestic and international stocks, cryptocurrencies, global market indices, and more. Key data displayed includes:
+
+- Current price / index points
+- Price change relative to the previous close
+- Percentage change
+- Auto-refreshes every 10 minutes
+
+This widget is inspired by and adapted from the Stocks widget (Übersicht for macOS) by Dion Munk at [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks).
+
+## Requirements
+
+Compatible with Linux GNOME 45 and later.
+
+Requires Python and curl. Check if they are installed by running:
+
+```bash
+python3 --version
+command -v curl
+curl --version
+```
+
+If curl is not installed, install it using:
+
+```bash
+sudo apt update
+sudo apt install curl
+```
+
+## Installation
+
+You can use Extension Manager for a simple graphical setup.
+
+Download the repository, extract it, rename the extracted folder to `stock-market@binhnguyensoft.com`, then open Terminal and run:
+
+```bash
+gnome-extensions install --force stock-market@binhnguyensoft.com
+```
+
+Alternatively, extract and copy the `stock-market@binhnguyensoft.com` folder directly into `~/.local/share/gnome-shell/extensions`.
+
+If the extension does not appear immediately, log out and log back in, then enable it via your extensions manager or by running:
+
+```bash
+gnome-extensions enable stock-market@binhnguyensoft.com
+```
+
+## Preferences
+
+Open the preferences window via Extension Manager or run:
+
+```bash
+gnome-extensions prefs stock-market@binhnguyensoft.com
+```
+
+- Position: Left/Top offsets in pixels relative to the top-left corner of the screen. Default: 15/15 px.
+- Refresh Interval: 5–300 minutes, default is 10 minutes. If an error occurs, the widget automatically backs off and increases the retry delay.
+- Watchlist: Add, edit, or reorder Yahoo Finance ticker symbols (remember to click Save). Supports up to 20 symbols. How to find symbols: Search for an asset on Yahoo Finance; for example, searching for Bitcoin yields Bitcoin USD Price (BTC-USD)—use BTC-USD as the ticker.
+- Language: Follows system locale, English, or Vietnamese.
+
+## Credits
+
+This widget is built upon the Stocks widget (Übersicht for macOS) created by Dion Munk at [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks)].
+
+Dion Munk requires attribution under the [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/).
+
+---
+
 Widget hiển thị bảng giá các mã chứng khoán, tiền số,... từ Yahoo Finance trên Desktop cho GNOME Shell
 
 ## Screenshot
@@ -53,13 +131,7 @@ Nếu extension không hiển thị, hãy logout rồi login lại, sau đó, b�
 gnome-extensions enable stock-market@binhnguyensoft.com
 ```
 
-## Tùy chỉnh / Preferences
-
-Biên dịch schema sau khi tải hoặc cập nhật mã nguồn:
-
-```bash
-glib-compile-schemas schemas/
-```
+## Tùy chỉnh
 
 Mở cấu hình bằng Extension Manager hoặc:
 
@@ -67,19 +139,10 @@ Mở cấu hình bằng Extension Manager hoặc:
 gnome-extensions prefs stock-market@binhnguyensoft.com
 ```
 
-- **Vị trí:** Trái/Trên tính bằng pixel từ góc trên trái thật của màn hình chính, không cộng chiều cao thanh menu. Đặt cả hai bằng 0 để dùng đúng gốc màn hình; thanh menu có thể che phần trên của widget. Mặc định: 15/15 px.
+- **Vị trí:** Trái/Trên tính bằng pixel từ góc trên trái của màn hình. Mặc định: 15/15 px.
 - **Chu kỳ cập nhật:** 5–300 phút, mặc định 10 phút. Khi có lỗi, widget tự tăng thời gian thử lại.
-- **Mã theo dõi:** nhập các symbols Yahoo Finance, phân cách bằng dấu phẩy hoặc khoảng trắng, rồi nhấn nút áp dụng. Tối đa 20 mã. Xóa mã khỏi ô để bỏ theo dõi; xóa hết để tạm dừng yêu cầu mạng.
-- **Ngôn ngữ:** Theo hệ thống, English hoặc Tiếng Việt. Thay đổi áp dụng ngay cho widget và cửa sổ cấu hình.
-
-### English
-
-Compile settings with `glib-compile-schemas schemas/` after downloading or updating the source, then open Preferences using Extension Manager or the command above.
-
-- **Position:** Left/Top are pixels from the primary monitor’s actual top-left corner, without a panel offset. Set both to zero for the screen origin; the top panel may cover that part of the widget. Defaults: 15/15 px.
-- **Update interval:** 5–300 minutes, default 10. Failed updates use exponential retry delays.
-- **Symbols:** enter up to 20 Yahoo Finance symbols separated by commas or spaces, then click Apply. Remove entries to stop tracking them. An empty list pauses network requests.
-- **Language:** System default, English, or Vietnamese; changes apply immediately.
+- **Mã theo dõi:** nhập các symbols Yahoo Finance, sửa, sắp xếp (nhớ bấm Lưu). Tối đa 20 mã. Cách lấy mã: Tìm mã theo tên trên Yahoo Finance, ví dụ tìm Bitcoin sẽ ra `Bitcoin USD Price (BTC-USD)` thì BTC-USD là mã sẽ lưu vào widget.
+- **Ngôn ngữ:** Theo hệ thống, English hoặc Tiếng Việt.
 
 ## Credit
 
