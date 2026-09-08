@@ -6,7 +6,7 @@ A desktop widget for GNOME Shell that displays real-time quotes for stocks, cryp
 
 ## Screenshot
 
-![Screenshot](stock-market.webp)
+![Screenshot](screenshot-en.webp)
 
 ## Overview
 
@@ -81,7 +81,7 @@ Widget hiển thị bảng giá các mã chứng khoán, tiền số,... từ Ya
 
 ## Screenshot
 
-![Screenshot](stock-market.webp)
+![Screenshot](screenshot-vi.webp)
 
 ## Giới thiệu
 
