@@ -1,0 +1,91 @@
+name: shexli
+
+# Static review with shexli, the EGO reviewers' analyzer, through Marco
+# Trevisan's shexli-ci. Findings are annotated on the PR's changed lines and
+# posted as one PR comment, updated on each push, so reviewers can weigh in.
+# Added by gnome-extensions-hive; see its docs/review-pipeline.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SHEXLI_CI_REF: 'c31b5dc22ae7acd684e5ec9ee6728f39ac2e1eac'
+  SHEXLI_SOURCE: 'git+https://gitlab.gnome.org/3v1n0/extensions-web.git@4c063f8ae9e220df6b3d1f4cdeb168420ab558c4#subdirectory=shexli'
+
+jobs:
+  shexli:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Packaging Tools
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends gnome-shell gettext
+
+      # EGO reviews the uploaded ZIP, so shexli checks the package, not the tree.
+      - name: Package
+        run: gnome-extensions pack . --force --extra-source=stocks_fetch.py --extra-source=language.js --out-dir "${RUNNER_TEMP}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run shexli-ci
+        uses: 3v1n0/shexli-ci@c31b5dc22ae7acd684e5ec9ee6728f39ac2e1eac
+        with:
+          path: ${{ runner.temp }}/stock-market@binhnguyensoft.com.shell-extension.zip
+          shexli-source: ${{ env.SHEXLI_SOURCE }}
+          report-path: ${{ runner.temp }}/shexli-report.json
+
+      # Fork PRs get a read-only token, so only same-repository PRs are commented on.
+      - name: Comment on Pull Request
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ZIP_PATH: ${{ runner.temp }}/stock-market@binhnguyensoft.com.shell-extension.zip
+        run: |
+          # shexli-ci writes no report when packaging or installing shexli failed.
+          [ -s "${RUNNER_TEMP}/shexli-report.json" ] || exit 0
+          marker='<!-- shexli-ci -->'
+          curl -fsSL -o "${RUNNER_TEMP}/check_shexli.py" \
+            "https://raw.githubusercontent.com/3v1n0/shexli-ci/${SHEXLI_CI_REF}/check_shexli.py"
+          python3 "${RUNNER_TEMP}/check_shexli.py" "${RUNNER_TEMP}/shexli-report.json" \
+            --source "${ZIP_PATH}" --allow-new --no-annotate --summary "${RUNNER_TEMP}/summary.md" > /dev/null
+          {
+            echo "${marker}"
+            cat "${RUNNER_TEMP}/summary.md"
+            echo
+            echo "<details><summary>shexli output</summary>"
+            echo
+            echo '```'
+            shexli --format text "${ZIP_PATH}" | sed "s|${RUNNER_TEMP}/||g" || true
+            echo '```'
+            echo
+            echo "</details>"
+            echo
+            echo "Commit \`${{ github.event.pull_request.head.sha }}\` · [workflow run](${RUN_URL})"
+          } > "${RUNNER_TEMP}/comment.md"
+          # Update the earlier comment rather than adding one per push.
+          comment_id=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | startswith(\"${marker}\"))][0].id // empty")
+          if [ -n "${comment_id}" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" -F body=@"${RUNNER_TEMP}/comment.md" > /dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F body=@"${RUNNER_TEMP}/comment.md" > /dev/null
+          fi
