@@ -1,0 +1,4 @@
+# Human reviewers for hive changes (docs/review-pipeline.md in
+# gnome-extensions-hive/documentation). Agent PRs need one of these
+# reviews before merge; a green shexli check is not enough.
+* @sramkrishna @jrahmatzadeh
