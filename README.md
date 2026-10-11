@@ -69,6 +69,27 @@ gnome-extensions prefs stock-market@binhnguyensoft.com
 - Watchlist: Add, edit, or reorder Yahoo Finance ticker symbols (remember to click Save). Supports up to 20 symbols. How to find symbols: Search for an asset on Yahoo Finance; for example, searching for Bitcoin yields Bitcoin USD Price (BTC-USD)—use BTC-USD as the ticker.
 - Language: Follows system locale, English, or Vietnamese.
 
+## Tests
+
+Run the offline Python tests from the repository root:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+The tests use only the Python standard library. They mock external processes and
+Yahoo responses, and isolate cache and cookie files in temporary directories.
+They exercise `stocks_fetch.py`; they do not establish GNOME Shell integration
+or end-to-end coverage.
+
+To collect raw unit execution counts and annotated source coverage:
+
+```bash
+mkdir -p .coverage
+python3 -m trace --count --summary --missing --file .coverage/unit.counts \
+  --coverdir .coverage --module unittest discover -s tests
+```
+
 ## Credits
 
 This widget is built upon the Stocks widget (Übersicht for macOS) created by Dion Munk at [https://github.com/dionmunk/uebersicht-stocks](https://github.com/dionmunk/uebersicht-stocks)].
