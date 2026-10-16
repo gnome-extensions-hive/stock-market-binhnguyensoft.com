@@ -42,13 +42,12 @@ sudo apt install curl
 
 You can use Extension Manager for a simple graphical setup.
 
-Download the repository, extract it, rename the extracted folder to `stock-market@binhnguyensoft.com`, then open Terminal and run:
+Download the repository, extract it, rename the extracted folder to `stock-market@binhnguyensoft.com`, and move or copy it into `~/.local/share/gnome-shell/extensions`:
 
 ```bash
-gnome-extensions install --force stock-market@binhnguyensoft.com
+mkdir -p ~/.local/share/gnome-shell/extensions
+cp -r stock-market@binhnguyensoft.com ~/.local/share/gnome-shell/extensions/
 ```
-
-Alternatively, extract and copy the `stock-market@binhnguyensoft.com` folder directly into `~/.local/share/gnome-shell/extensions`.
 
 If the extension does not appear immediately, log out and log back in, then enable it via your extensions manager or by running:
 
@@ -117,13 +116,12 @@ sudo apt install curl
 
 Bạn có thể cài Extension Manager để dễ thao tác bằng giao diện.
 
-Download repository, giải nén, đổi tên thư mục thành `stock-market@binhnguyensoft.com` rồi mở **Terminal** chạy lệnh:
+Download repository, giải nén, đổi tên thư mục thành `stock-market@binhnguyensoft.com` rồi copy vào `~/.local/share/gnome-shell/extensions`:
 
 ```bash
-gnome-extensions install --force stock-market@binhnguyensoft.com
+mkdir -p ~/.local/share/gnome-shell/extensions
+cp -r stock-market@binhnguyensoft.com ~/.local/share/gnome-shell/extensions/
 ```
-
-Hoặc giải nén rồi copy thư mục `stock-market@binhnguyensoft.com` vào `~/.local/share/gnome-shell/extensions`.
 
 Nếu extension không hiển thị, hãy logout rồi login lại, sau đó, bật bằng giao diện hoặc chạy lệnh:
 
